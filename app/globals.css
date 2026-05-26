@@ -66,3 +66,21 @@ body {
   pointer-events: none;
 }
 
+@keyframes hud-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes cursor-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.95); filter: drop-shadow(0 0 6px var(--cursor-glow, #00FF41)); }
+  50% { transform: translate(-50%, -50%) scale(1.05); filter: drop-shadow(0 0 14px var(--cursor-glow, #00FF41)); }
+}
+
+.animate-hud-pulse {
+  animation: hud-pulse 3s ease-in-out infinite;
+}
+
+.animate-cursor-breathe {
+  animation: cursor-breathe 2s ease-in-out infinite;
+}
+

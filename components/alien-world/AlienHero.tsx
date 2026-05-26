@@ -43,7 +43,8 @@ export function AlienHero({ alienId }: { alienId: string }) {
             className="text-6xl md:text-8xl font-display uppercase tracking-tighter transition-all"
             style={{ 
               color: 'var(--color-primary)', 
-              textShadow: `0 0 35px var(--color-glow)`
+              textShadow: `0 0 35px var(--color-glow)`,
+              animation: 'float-name 4s ease-in-out infinite',
             }}
           >
             {theme ? theme.name : alienId}
@@ -72,6 +73,10 @@ export function AlienHero({ alienId }: { alienId: string }) {
             @keyframes float-image {
               0%, 100% { transform: translateY(0); }
               50% { transform: translateY(-10px); }
+            }
+            @keyframes float-name {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-4px); }
             }
           `}</style>
         </div>

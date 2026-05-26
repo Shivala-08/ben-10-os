@@ -1,13 +1,25 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
 import { WheelSlot } from './WheelSlot';
 import { BIG_10_NAMES } from '@/lib/api/ben10';
 import { synth } from '@/lib/utils/WebAudioSynth';
 import gsap from 'gsap';
+import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
+import * as THREE from 'three';
+
+function DriftingWheel({ children, rotation }: { children: React.ReactNode, rotation: number }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    if (!ref.current) return;
+    // Gentle breathing drift Y left and right
+    ref.current.rotation.y = rotation + Math.sin(state.clock.getElapsedTime() * 0.3) * 0.05;
+  });
+  return <group ref={ref}>{children}</group>;
+}
 
 export function AlienWheel() {
   const wheelRotation = useOmnitrixStore((state) => state.wheelRotation);
@@ -73,7 +85,6 @@ export function AlienWheel() {
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true;
     startX.current = e.clientX;
-    startRotation.current = wheelRotation;
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grabbing';
     }
@@ -81,10 +92,14 @@ export function AlienWheel() {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
-    const deltaX = e.clientX - startX.current;
-    // Map drag distance to wheel rotation in radians
-    const newRotation = startRotation.current + deltaX * 0.005;
-    setWheelRotation(newRotation);
+    const currentX = e.clientX;
+    const deltaX = currentX - startX.current;
+    
+    // Accumulate rotation continuously based on differential movement delta
+    setWheelRotation(wheelRotation + deltaX * 0.006);
+    
+    // Prevent screen limits by updating start position to current position
+    startX.current = currentX;
   };
 
   const handlePointerUp = () => {
@@ -124,7 +139,7 @@ export function AlienWheel() {
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color="#00FF41" />
         
-        <group rotation={[0, wheelRotation, 0]}>
+        <DriftingWheel rotation={wheelRotation}>
           {BIG_10_NAMES.map((name, index) => {
             const angle = (index / BIG_10_NAMES.length) * Math.PI * 2;
             const radius = 5;
@@ -141,7 +156,7 @@ export function AlienWheel() {
               />
             );
           })}
-        </group>
+        </DriftingWheel>
 
         {/* Hologram Ring effect */}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -150,6 +165,13 @@ export function AlienWheel() {
         </mesh>
 
         <Environment preset="city" />
+
+        {/* High-Fidelity Cinematic Post-Processing */}
+        <EffectComposer>
+          <Bloom luminanceThreshold={0.15} intensity={1.3} mipmapBlur />
+          <Noise opacity={0.04} />
+          <Vignette eskil={false} offset={0.3} darkness={0.8} />
+        </EffectComposer>
       </Canvas>
     </div>
   );

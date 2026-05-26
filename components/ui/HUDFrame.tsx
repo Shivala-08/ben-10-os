@@ -4,7 +4,7 @@ import React from 'react';
 
 export function HUDFrame() {
   return (
-    <div className="fixed inset-0 pointer-events-none z-40 select-none">
+    <div className="fixed inset-0 pointer-events-none z-40 select-none animate-hud-pulse">
       {/* Top Left Corner */}
       <div className="absolute top-6 left-6 w-12 h-12 border-t-2 border-l-2 border-[var(--color-primary)]/70 shadow-[0_0_10px_var(--color-glow)]/40 transition-colors duration-500">
         <div className="w-2 h-2 bg-[var(--color-primary)] absolute -top-1 -left-1 transition-colors duration-500 animate-pulse" />

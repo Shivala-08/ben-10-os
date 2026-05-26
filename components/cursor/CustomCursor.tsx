@@ -161,11 +161,13 @@ export function CustomCursor() {
   return (
     <div
       ref={cursorRef}
-      className="fixed top-0 left-0 pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-300"
+      className="fixed top-0 left-0 pointer-events-none z-[100] flex items-center justify-center transition-all duration-300 animate-cursor-breathe"
       style={{
         width: hoveringClickable ? '56px' : '44px',
         height: hoveringClickable ? '56px' : '44px',
-        filter: `drop-shadow(0 0 8px ${glowColor})`,
+        // Set dynamic CSS variable for the custom breathing animation filter
+        // @ts-ignore
+        '--cursor-glow': glowColor,
       }}
     >
       {renderCursorSvg()}

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Text, Sparkles, Float, useTexture } from '@react-three/drei';
+import gsap from 'gsap';
 import * as THREE from 'three';
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
 import { synth } from '@/lib/utils/WebAudioSynth';
@@ -18,6 +19,7 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
   const [hovered, setHovered] = useState(false);
   const meshRef = useRef<THREE.Mesh>(null);
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
+  const { camera } = useThree();
 
   const active = hovered || isFocused;
   
@@ -33,7 +35,21 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
 
   const handleClick = (e: any) => {
     e.stopPropagation();
-    setActiveAlien(formattedId);
+
+    // Trigger transformation audio effect
+    synth.playTransform();
+
+    // Dolly camera forward into card face
+    gsap.to(camera.position, {
+      z: 1.8,
+      duration: 0.4,
+      ease: 'power2.in',
+      onComplete: () => {
+        setActiveAlien(formattedId);
+        // Reset camera positions for subsequent loads
+        camera.position.set(0, 2, 8);
+      }
+    });
   };
 
   return (
