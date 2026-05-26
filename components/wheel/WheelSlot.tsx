@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text, Sparkles, Float } from '@react-three/drei';
+import { Text, Sparkles, Float, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
 import { synth } from '@/lib/utils/WebAudioSynth';
@@ -20,6 +20,10 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
 
   const active = hovered || isFocused;
+  
+  // Format alien ID to match the image name (e.g., 'heatblast.png', 'four_arms.png')
+  const formattedId = name.toLowerCase().replace(' ', '_');
+  const texture = useTexture(`/aliens/${formattedId}.png`);
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
@@ -29,8 +33,6 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
 
   const handleClick = (e: any) => {
     e.stopPropagation();
-    // Convert 'Heatblast' to 'heatblast', 'Four Arms' to 'four_arms'
-    const formattedId = name.toLowerCase().replace(' ', '_');
     setActiveAlien(formattedId);
   };
 
@@ -59,6 +61,18 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
             emissiveIntensity={active ? 0.9 : 0}
             wireframe
           />
+
+          {/* Floating Holographic Image Texture */}
+          <mesh position={[0, 0, 0.11]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[0.9, 1.35]} />
+            <meshBasicMaterial 
+              map={texture} 
+              transparent 
+              opacity={active ? 0.95 : 0.5} 
+              toneMapped={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
 
           {active && (
             <Sparkles count={25} scale={2} size={3} speed={0.6} opacity={1} color="#00FF41" />
