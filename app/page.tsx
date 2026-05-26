@@ -18,7 +18,7 @@ import { NavBar } from '@/components/ui/NavBar';
 import { HUDFrame } from '@/components/ui/HUDFrame';
 import { useMouseParallax } from '@/hooks/useMouseParallax';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TransformSequence } from '@/components/transformation/TransformSequence';
 import { CursorTrail } from '@/components/cursor/CursorTrail';
 import gsap from 'gsap';
@@ -32,24 +32,26 @@ function CameraPullback() {
 }
 
 function TransformAberration() {
-  const ref = useRef<any>(null);
+  const [offset, setOffset] = useState<[number, number]>([0.018, 0.018]);
+
   useEffect(() => {
-    if (!ref.current) return;
     const initialOffset = { x: 0.018, y: 0.018 };
-    gsap.to(initialOffset, {
+    const tween = gsap.to(initialOffset, {
       x: 0.001,
       y: 0.001,
       duration: 0.6,
       ease: 'power2.out',
       onUpdate: () => {
-        if (ref.current && ref.current.offset) {
-          ref.current.offset.set(initialOffset.x, initialOffset.y);
-        }
+        setOffset([initialOffset.x, initialOffset.y]);
       }
     });
+
+    return () => {
+      tween.kill();
+    };
   }, []);
 
-  return <ChromaticAberration ref={ref} offset={[0.018, 0.018]} />;
+  return <ChromaticAberration offset={offset} />;
 }
 
 export default function Home() {
@@ -88,8 +90,6 @@ export default function Home() {
               <SurpriseButton />
             </div>
           </div>
-          {/* Scroll spacer to give Lenis scrolling height */}
-          <div className="h-[400vh] w-full pointer-events-none" />
         </>
       )}
 

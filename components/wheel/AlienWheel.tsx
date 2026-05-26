@@ -29,8 +29,9 @@ export function AlienWheel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
-  const startRotation = useRef(0);
   const isMounted = useRef(false);
+  const snapTween = useRef<gsap.core.Tween | null>(null);
+  const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Compute active focused alien index based on rotation angle
   const activeIndex = (Math.round((-wheelRotation) / ((2 * Math.PI) / 10)) % 10 + 10) % 10;
@@ -48,16 +49,17 @@ export function AlienWheel() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const slotAngle = (2 * Math.PI) / 10;
-      let targetRotation = wheelRotation;
+      const latestRotation = useOmnitrixStore.getState().wheelRotation;
+      let targetRotation = latestRotation;
 
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        // Rotate to the next slot (decrement because wheel rotation Y is opposite)
-        targetRotation = wheelRotation - slotAngle;
+        targetRotation = latestRotation - slotAngle;
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        // Rotate to the previous slot
-        targetRotation = wheelRotation + slotAngle;
+        targetRotation = latestRotation + slotAngle;
       } else if (e.key === 'Enter') {
-        const formattedId = BIG_10_NAMES[activeIndex].toLowerCase().replace(' ', '_');
+        const currentRot = useOmnitrixStore.getState().wheelRotation;
+        const currentActiveIndex = (Math.round((-currentRot) / ((2 * Math.PI) / 10)) % 10 + 10) % 10;
+        const formattedId = BIG_10_NAMES[currentActiveIndex].toLowerCase().replace(' ', '_');
         setActiveAlien(formattedId);
         return;
       } else {
@@ -66,8 +68,12 @@ export function AlienWheel() {
 
       e.preventDefault();
 
+      if (snapTween.current) {
+        snapTween.current.kill();
+      }
+
       // Smoothly animate rotation to snapped target
-      gsap.to({ val: wheelRotation }, {
+      snapTween.current = gsap.to({ val: latestRotation }, {
         val: targetRotation,
         duration: 0.4,
         ease: 'power2.out',
@@ -79,7 +85,7 @@ export function AlienWheel() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [wheelRotation, setWheelRotation, setActiveAlien, activeIndex]);
+  }, [setWheelRotation, setActiveAlien]);
 
   // Pointer drag event handlers
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -88,15 +94,24 @@ export function AlienWheel() {
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grabbing';
     }
+    if (snapTween.current) {
+      snapTween.current.kill();
+      snapTween.current = null;
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
+    if (snapTween.current) {
+      snapTween.current.kill();
+      snapTween.current = null;
+    }
     const currentX = e.clientX;
     const deltaX = currentX - startX.current;
     
+    const latestRotation = useOmnitrixStore.getState().wheelRotation;
     // Accumulate rotation continuously based on differential movement delta
-    setWheelRotation(wheelRotation + deltaX * 0.006);
+    setWheelRotation(latestRotation + deltaX * 0.006);
     
     // Prevent screen limits by updating start position to current position
     startX.current = currentX;
@@ -109,11 +124,12 @@ export function AlienWheel() {
       containerRef.current.style.cursor = 'grab';
     }
 
+    const latestRotation = useOmnitrixStore.getState().wheelRotation;
     // Snap to the nearest slot smoothly
     const slotAngle = (2 * Math.PI) / 10;
-    const snapped = Math.round(wheelRotation / slotAngle) * slotAngle;
+    const snapped = Math.round(latestRotation / slotAngle) * slotAngle;
     
-    gsap.to({ val: wheelRotation }, {
+    snapTween.current = gsap.to({ val: latestRotation }, {
       val: snapped,
       duration: 0.4,
       ease: 'power3.out',
@@ -122,6 +138,56 @@ export function AlienWheel() {
       }
     });
   };
+
+  // Setup direct mouse wheel event listener on container to allow scrolling
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheelEvent = (e: WheelEvent) => {
+      e.preventDefault();
+      
+      if (isDragging.current) return;
+
+      if (snapTween.current) {
+        snapTween.current.kill();
+        snapTween.current = null;
+      }
+
+      const deltaY = e.deltaY;
+      const latestRotation = useOmnitrixStore.getState().wheelRotation;
+      
+      // Rotate the wheel based on deltaY
+      const newRotation = latestRotation - deltaY * 0.002;
+      setWheelRotation(newRotation);
+
+      // Debounce the snap to the nearest slot
+      if (wheelTimeout.current) {
+        clearTimeout(wheelTimeout.current);
+      }
+
+      wheelTimeout.current = setTimeout(() => {
+        const slotAngle = (2 * Math.PI) / 10;
+        const currentRot = useOmnitrixStore.getState().wheelRotation;
+        const snapped = Math.round(currentRot / slotAngle) * slotAngle;
+
+        snapTween.current = gsap.to({ val: currentRot }, {
+          val: snapped,
+          duration: 0.4,
+          ease: 'power3.out',
+          onUpdate: function() {
+            setWheelRotation(this.targets()[0].val);
+          }
+        });
+      }, 150);
+    };
+
+    container.addEventListener('wheel', handleWheelEvent, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheelEvent);
+      if (wheelTimeout.current) clearTimeout(wheelTimeout.current);
+    };
+  }, [setWheelRotation]);
 
   return (
     <div 
