@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { Environment, useTexture, Sparkles } from '@react-three/drei';
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
 import { WheelSlot } from './WheelSlot';
 import { BIG_10_NAMES } from '@/lib/api/ben10';
@@ -46,34 +46,130 @@ function CameraShake() {
   return null;
 }
 
-interface CenterButtonProps {
+// Vertical Hologram silhouette projection rising out of the watch face
+interface HologramProps {
+  alienId: string;
+}
+
+function CentralHologram({ alienId }: HologramProps) {
+  const texture = useTexture(`/aliens/${alienId}.png`);
+  const hologramRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const elapsed = state.clock.getElapsedTime();
+    
+    // Slow float and twist animation
+    if (hologramRef.current) {
+      hologramRef.current.position.y = 0.2 + Math.sin(elapsed * 2.5) * 0.05;
+      hologramRef.current.rotation.y = Math.sin(elapsed * 1.2) * 0.08;
+    }
+  });
+
+  return (
+    <group ref={hologramRef}>
+      {/* Light cylinder projection beam */}
+      <mesh position={[0, 0.7, 0]}>
+        <cylinderGeometry args={[0.7, 1.0, 1.4, 32, 1, true]} />
+        <meshBasicMaterial 
+          color="#00FF41" 
+          transparent 
+          opacity={0.06} 
+          side={THREE.DoubleSide} 
+          wireframe
+        />
+      </mesh>
+
+      {/* Hologram Card display */}
+      <mesh ref={meshRef} position={[0, 1.2, 0]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[1.35, 1.8]} />
+        <meshBasicMaterial 
+          map={texture} 
+          transparent 
+          opacity={0.7} 
+          color="#00FF41" 
+          side={THREE.DoubleSide}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* Sparkles ascending around the hologram */}
+      <Sparkles 
+        count={20} 
+        position={[0, 1.0, 0]} 
+        scale={[1.2, 1.8, 1.2]} 
+        size={2.5} 
+        speed={0.4} 
+        color="#00FF41" 
+      />
+    </group>
+  );
+}
+
+interface OmnitrixWatchFaceProps {
   activeIndex: number;
   formattedId: string;
   isLocked: boolean;
   onLockedClick: () => void;
+  wheelRotation: number;
+  isTransforming: boolean;
 }
 
-function CenterButton({ activeIndex, formattedId, isLocked, onLockedClick }: CenterButtonProps) {
+function OmnitrixWatchFace({ 
+  formattedId, 
+  isLocked, 
+  onLockedClick, 
+  wheelRotation,
+}: OmnitrixWatchFaceProps) {
   const [hovered, setHovered] = useState(false);
-  const buttonRef = useRef<THREE.Group>(null);
+  const watchRef = useRef<THREE.Group>(null);
+  const screenMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const wedge1Ref = useRef<THREE.Mesh>(null);
+  const wedge2Ref = useRef<THREE.Mesh>(null);
+  const lastRotation = useRef(0);
+  
   const { camera } = useThree();
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
   const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
 
-  const handlePointerOver = (e: any) => {
+  useFrame((state) => {
+    // 1. Glowing Screen Pulse
+    if (screenMatRef.current) {
+      const elapsed = state.clock.getElapsedTime();
+      screenMatRef.current.emissiveIntensity = 0.45 + Math.sin(elapsed * 2.5) * 0.15;
+    }
+
+    // 2. Hourglass Wedges Animation (rotating on Y-axis for 3D cylinders)
+    if (wedge1Ref.current && wedge2Ref.current) {
+      const elapsed = state.clock.getElapsedTime();
+      const deltaRot = Math.abs(wheelRotation - lastRotation.current);
+      lastRotation.current = wheelRotation;
+
+      // Slow mechanical idle breathing wobble
+      const idleWobble = Math.sin(elapsed * 1.5) * 0.035;
+
+      // Dynamic reactive twist responding to wheel rotation speed
+      const twist = deltaRot * 1.8;
+
+      wedge1Ref.current.rotation.y = idleWobble + twist;
+      wedge2Ref.current.rotation.y = -idleWobble - twist;
+    }
+  });
+
+  const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHovered(true);
     document.body.style.cursor = 'pointer';
     synth.playClick();
   };
 
-  const handlePointerOut = (e: any) => {
+  const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHovered(false);
     document.body.style.cursor = 'auto';
   };
 
-  const handleClick = (e: any) => {
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     
     if (isLocked) {
@@ -85,10 +181,10 @@ function CenterButton({ activeIndex, formattedId, isLocked, onLockedClick }: Cen
     synth.playTransform();
     setIsTransforming(true);
 
-    // Z-press spring animation (dipping down)
-    if (buttonRef.current) {
-      gsap.to(buttonRef.current.position, {
-        y: -0.15,
+    // Spring plunge mechanical dial action
+    if (watchRef.current) {
+      gsap.to(watchRef.current.position, {
+        y: -0.18,
         duration: 0.08,
         yoyo: true,
         repeat: 1,
@@ -101,22 +197,16 @@ function CenterButton({ activeIndex, formattedId, isLocked, onLockedClick }: Cen
             return;
           }
 
-          // Panoramic dolly push towards focused card slot
-          const angle = (activeIndex / 10) * Math.PI * 2;
-          const radius = 5;
-          const targetX = Math.sin(angle) * radius;
-          const targetZ = Math.cos(angle) * radius;
-
-          // Animate camera to focused slot
+          // Panoramic dolly push directly into the watch center screen
           gsap.to(camera.position, {
-            x: targetX * 0.45,
-            y: 0.6,
-            z: targetZ * 0.45,
-            duration: 0.4,
+            x: 0,
+            y: 1.8,
+            z: 2.2,
+            duration: 0.45,
             ease: 'power2.in',
             onComplete: () => {
               setActiveAlien(formattedId);
-              camera.position.set(0, 2, 8); // reset for subsequent loads
+              camera.position.set(0, 5.5, 6.2); // reset for subsequent loads
             }
           });
         }
@@ -125,62 +215,138 @@ function CenterButton({ activeIndex, formattedId, isLocked, onLockedClick }: Cen
   };
 
   return (
-    <group 
-      ref={buttonRef}
-      position={[0, 0.1, 0]}
-    >
-      {/* Outer button cap */}
-      <mesh
-        onPointerOver={handlePointerOver}
-        onPointerOut={handlePointerOut}
-        onClick={handleClick}
-      >
-        <cylinderGeometry args={[1.2, 1.2, 0.25, 32]} />
+    <group ref={watchRef} position={[0, 0.08, 0]}>
+      {/* Matte Black Armor watch casing / base straps */}
+      <group position={[0, -0.4, 0]}>
+        <mesh>
+          <boxGeometry args={[4.4, 0.6, 4.4]} />
+          <meshStandardMaterial color="#0c0c0c" roughness={0.8} metalness={0.1} />
+        </mesh>
+        
+        {/* Armored strap grooves */}
+        <mesh position={[0, 0.05, 2.25]}>
+          <boxGeometry args={[1.8, 0.52, 0.15]} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.05, -2.25]}>
+          <boxGeometry args={[1.8, 0.52, 0.15]} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+        </mesh>
+      </group>
+
+      {/* Silver mechanical dial outer bezel (rotates with manual selector dial) */}
+      <group rotation={[0, wheelRotation, 0]}>
+        {/* Main Silver bezel ring */}
+        <mesh 
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+          onClick={handleClick}
+        >
+          <cylinderGeometry args={[1.5, 1.5, 0.24, 64]} />
+          <meshStandardMaterial 
+            color={hovered ? "#e5e5e5" : "#b8b8b8"} 
+            roughness={0.12} 
+            metalness={0.95} 
+          />
+        </mesh>
+
+        {/* Outer bezel rivets (detailed micro-mechanical finish) */}
+        {[...Array(8)].map((_, i) => {
+          const rivetAngle = (i / 8) * Math.PI * 2;
+          const rx = Math.sin(rivetAngle) * 1.32;
+          const rz = Math.cos(rivetAngle) * 1.32;
+          return (
+            <mesh key={i} position={[rx, 0.12, rz]}>
+              <sphereGeometry args={[0.045, 16, 16]} />
+              <meshStandardMaterial color="#8a8a8a" metalness={0.9} roughness={0.15} />
+            </mesh>
+          );
+        })}
+
+        {/* 4 classic green bezel triangular markings at 90-deg intervals */}
+        {[0, 1, 2, 3].map((idx) => {
+          const markAngle = (idx / 4) * Math.PI * 2;
+          const mx = Math.sin(markAngle) * 1.48;
+          const mz = Math.cos(markAngle) * 1.48;
+          return (
+            <mesh key={idx} position={[mx, 0, mz]} rotation={[0, markAngle, 0]}>
+              <boxGeometry args={[0.18, 0.26, 0.08]} />
+              <meshBasicMaterial color="#00FF41" />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* Torus curved pipes linking casing and bezel */}
+      {/* Corner Pipes - Top Right */}
+      <group position={[1.2, -0.22, 1.2]} rotation={[0, -Math.PI / 4, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.55, 0.08, 16, 32, Math.PI / 2]} />
+          <meshStandardMaterial color="#c8c8c8" metalness={0.95} roughness={0.1} />
+        </mesh>
+      </group>
+      {/* Corner Pipes - Top Left */}
+      <group position={[-1.2, -0.22, 1.2]} rotation={[0, Math.PI / 4, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, Math.PI / 2]}>
+          <torusGeometry args={[0.55, 0.08, 16, 32, Math.PI / 2]} />
+          <meshStandardMaterial color="#c8c8c8" metalness={0.95} roughness={0.1} />
+        </mesh>
+      </group>
+      {/* Corner Pipes - Bottom Right */}
+      <group position={[1.2, -0.22, -1.2]} rotation={[0, -3 * Math.PI / 4, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, -Math.PI / 2]}>
+          <torusGeometry args={[0.55, 0.08, 16, 32, Math.PI / 2]} />
+          <meshStandardMaterial color="#c8c8c8" metalness={0.95} roughness={0.1} />
+        </mesh>
+      </group>
+      {/* Corner Pipes - Bottom Left */}
+      <group position={[-1.2, -0.22, -1.2]} rotation={[0, 3 * Math.PI / 4, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, Math.PI]}>
+          <torusGeometry args={[0.55, 0.08, 16, 32, Math.PI / 2]} />
+          <meshStandardMaterial color="#c8c8c8" metalness={0.95} roughness={0.1} />
+        </mesh>
+      </group>
+
+      {/* Black inner display well */}
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[1.2, 1.2, 0.18, 32]} />
+        <meshStandardMaterial color="#080808" roughness={0.7} />
+      </mesh>
+
+      {/* Screen Lens with glowing green core */}
+      <mesh position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[1.15, 1.15, 0.05, 32]} />
         <meshStandardMaterial 
-          color={hovered ? "#00FF41" : "#112211"} 
-          emissive={hovered ? "#00FF41" : "#003308"}
-          emissiveIntensity={hovered ? 1.4 : 0.6}
-          roughness={0.2}
-          metalness={0.8}
+          ref={screenMatRef}
+          color="#00881b" 
+          emissive="#00ff41" 
+          emissiveIntensity={0.45} 
+          roughness={0.25} 
         />
       </mesh>
-      
-      {/* Dynamic Inner core hourglass logo - background */}
-      <mesh position={[0, 0.13, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0, 0.85, 3]} />
-        <meshBasicMaterial 
-          color="#000000" 
-          side={THREE.DoubleSide} 
-        />
+
+      {/* Animated Hourglass Wedges (Solid 3D cylindrical mechanical plates) */}
+      {/* Hourglass Wedge 1 (Top / Bottom Sector) */}
+      <mesh ref={wedge1Ref} position={[0, 0.13, 0]}>
+        <cylinderGeometry args={[1.13, 1.13, 0.12, 32, 1, false, -Math.PI / 4, Math.PI / 2]} />
+        <meshStandardMaterial color="#0c0c0c" roughness={0.7} metalness={0.2} />
       </mesh>
-      
-      {/* Dynamic Inner core hourglass logo - foreground green triangles */}
-      <mesh position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.5, 0.8, 3]} />
-        <meshBasicMaterial 
-          color={hovered ? "#00FF41" : "#00AA22"} 
-          side={THREE.DoubleSide} 
-        />
+      {/* Hourglass Wedge 2 (Opposing Sector) */}
+      <mesh ref={wedge2Ref} position={[0, 0.13, 0]}>
+        <cylinderGeometry args={[1.13, 1.13, 0.12, 32, 1, false, 3 * Math.PI / 4, Math.PI / 2]} />
+        <meshStandardMaterial color="#0c0c0c" roughness={0.7} metalness={0.2} />
       </mesh>
     </group>
   );
 }
 
-function DriftingWheel({ children, rotation, isDragging }: { children: React.ReactNode, rotation: number, isDragging: React.RefObject<boolean> }) {
+function DriftingWheel({ children, rotation }: { children: React.ReactNode, rotation: number }) {
   const ref = useRef<THREE.Group>(null);
-  const drift = useRef(0);
   
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!ref.current) return;
-    
-    // Slow continuous drift rotation when not actively dragging
-    // 0.18 rad per second (~0.003 rad per frame at 60fps)
-    if (!isDragging.current) {
-      drift.current += 0.18 * delta;
-    }
-    
-    // Combine state rotation, sinus breathing, and continuous drift
-    ref.current.rotation.y = rotation + drift.current + Math.sin(state.clock.getElapsedTime() * 0.3) * 0.04;
+    // Slow continuous micro breathing, maintaining perfect alignment with selection
+    ref.current.rotation.y = rotation + Math.sin(state.clock.getElapsedTime() * 0.3) * 0.015;
   });
   
   return <group ref={ref}>{children}</group>;
@@ -207,8 +373,8 @@ export function AlienWheel() {
   const [lockedErrorAlien, setLockedErrorAlien] = useState<string | null>(null);
 
   useEffect(() => {
-    if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(() => setCanvasReady(true));
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback?.(() => setCanvasReady(true));
     } else {
       const timer = setTimeout(() => setCanvasReady(true), 150);
       return () => clearTimeout(timer);
@@ -230,7 +396,7 @@ export function AlienWheel() {
     synth.playClick();
   }, [activeIndex]);
 
-  const handleLockedClick = (formattedId: string, name: string) => {
+  const handleLockedClick = useCallback((formattedId: string, name: string) => {
     if (lockedErrorAlien === name) {
       // Second click! Bypass and unlock DNA profile!
       setLockedErrorAlien(null);
@@ -255,7 +421,7 @@ export function AlienWheel() {
       setLockedErrorAlien(name);
       synth.playAccessDenied();
     }
-  };
+  }, [lockedErrorAlien, unlockAlien, setActiveAlien, setIsTransforming]);
 
   // Key handlers for keyboard navigation
   useEffect(() => {
@@ -313,7 +479,7 @@ export function AlienWheel() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setWheelRotation, setActiveAlien, isMalfunctioning, lockedErrorAlien]);
+  }, [setWheelRotation, setActiveAlien, isMalfunctioning, lockedErrorAlien, handleLockedClick]);
 
   // Pointer drag event handlers
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -466,15 +632,15 @@ export function AlienWheel() {
     >
       {canvasReady ? (
         <Canvas 
-          camera={{ position: [0, 2, 8], fov: 45 }}
+          camera={{ position: [0, 5.5, 6.2], fov: 45 }}
           className="pointer-events-none"
         >
-          <ambientLight intensity={0.5} />
+          <ambientLight intensity={0.55} />
           <pointLight position={[10, 10, 10]} intensity={1} color="#00FF41" />
           
           <CameraShake />
 
-          <DriftingWheel rotation={wheelRotation} isDragging={isDragging}>
+          <DriftingWheel rotation={wheelRotation}>
             {BIG_10_NAMES.map((name, index) => {
               const angle = (index / BIG_10_NAMES.length) * Math.PI * 2;
               const radius = 5;
@@ -503,13 +669,18 @@ export function AlienWheel() {
             <meshBasicMaterial color="#00FF41" transparent opacity={0.2} side={2} />
           </mesh>
 
-          {/* Dynamic Glowing Center Press Button */}
-          <CenterButton 
+          {/* Glowing mechanical 3D Omnitrix Watch-Face */}
+          <OmnitrixWatchFace 
             activeIndex={activeIndex} 
             formattedId={activeFormattedId}
             isLocked={isActiveLocked}
             onLockedClick={() => handleLockedClick(activeFormattedId, activeAlienName)}
+            wheelRotation={wheelRotation}
+            isTransforming={isTransforming}
           />
+
+          {/* Vertical Hologram Silhouette Projector rising from central display */}
+          <CentralHologram alienId={activeFormattedId} />
 
           <Environment preset="city" />
 
