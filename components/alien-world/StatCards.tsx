@@ -10,7 +10,7 @@ export function StatCards({ alienId }: { alienId: string }) {
   });
 
   const alienData = allAliens?.aliens.find(
-    (a) => a.general.name.toLowerCase().replace(' ', '_') === alienId
+    (a) => a._id === alienId || a.general.name.toLowerCase().replace(' ', '_') === alienId
   );
 
   if (!alienData) return null;

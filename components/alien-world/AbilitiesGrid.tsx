@@ -10,15 +10,23 @@ export function AbilitiesGrid({ alienId }: { alienId: string }) {
     queryFn: fetchAllAliens,
   });
 
+  // Find by direct ID match (most robust) or fallback to name matching
   const alienData = allAliens?.aliens.find(
-    (a) => a.general.name.toLowerCase().replace(' ', '_') === alienId
+    (a) => a._id === alienId || a.general.name.toLowerCase().replace(' ', '_') === alienId
   );
 
   if (!alienData || !alienData.abilities) return null;
 
   return (
     <div className="space-y-8">
-      <h3 className="text-2xl font-display text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-primary)]/30 pb-4 inline-block">
+      <h3 
+        className="text-2xl font-display uppercase tracking-widest border-b pb-4 inline-block"
+        style={{ 
+          color: 'var(--color-primary)', 
+          borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+          textShadow: '0 0 15px var(--color-glow)'
+        }}
+      >
         Known Abilities
       </h3>
       
@@ -26,11 +34,18 @@ export function AbilitiesGrid({ alienId }: { alienId: string }) {
         {alienData.abilities.map((ability, index) => (
           <motion.div
             key={ability}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.5 }}
-            viewport={{ once: true }}
-            className="px-6 py-3 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/50 rounded-full text-[var(--color-text)] font-mono text-sm tracking-wider uppercase shadow-[0_0_10px_var(--color-primary)_inset] hover:bg-[var(--color-primary)] hover:text-black hover:shadow-[0_0_20px_var(--color-primary)] transition-all cursor-default"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.08, duration: 0.4, ease: 'easeOut' }}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderColor: 'var(--color-primary)',
+              borderWidth: '1px',
+              color: 'var(--color-text)',
+              textShadow: '0 0 5px var(--color-glow)',
+              boxShadow: '0 0 12px var(--color-glow) inset'
+            }}
+            className="px-6 py-3 rounded-full font-mono text-sm tracking-wider uppercase hover:text-black transition-all duration-300 cursor-default"
           >
             {ability}
           </motion.div>

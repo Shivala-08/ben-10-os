@@ -17,9 +17,9 @@ export function AlienHero({ alienId }: { alienId: string }) {
     return <div className="text-[var(--color-primary)] font-mono animate-pulse text-lg tracking-widest uppercase">DECODING DNA MATRICES...</div>;
   }
 
-  // Find the matching alien from API data
+  // Find the matching alien from API data (checking direct ID match or name mapping)
   const alienData = allAliens?.aliens.find(
-    (a) => a.general.name.toLowerCase().replace(' ', '_') === alienId
+    (a) => a._id === alienId || a.general.name.toLowerCase().replace(' ', '_') === alienId
   );
 
   const theme = themes[alienId];
