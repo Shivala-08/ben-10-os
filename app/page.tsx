@@ -17,6 +17,7 @@ import { EffectComposer, Bloom, Noise, Vignette, ChromaticAberration } from '@re
 import { NavBar } from '@/components/ui/NavBar';
 import { HUDFrame } from '@/components/ui/HUDFrame';
 import { useMouseParallax } from '@/hooks/useMouseParallax';
+import { useIdleAnimations } from '@/hooks/useIdleAnimations';
 
 import { useEffect, useRef, useState } from 'react';
 import { TransformSequence } from '@/components/transformation/TransformSequence';
@@ -25,9 +26,16 @@ import gsap from 'gsap';
 
 function CameraPullback() {
   const { camera } = useThree();
+  const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
   useEffect(() => {
     gsap.fromTo(camera.position, { z: 1.5 }, { z: 5, duration: 0.8, ease: 'power2.out' });
-  }, [camera]);
+    
+    const timer = setTimeout(() => {
+      setIsTransforming(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [camera, setIsTransforming]);
   return null;
 }
 
@@ -59,6 +67,9 @@ export default function Home() {
   const activeAlien = useOmnitrixStore((state) => state.activeAlien);
   const tiltRef = useMouseParallax(5); // Smooth sci-fi tilt effect
   
+  // Register GSAP continuous UI breathing loops
+  useIdleAnimations(bootComplete);
+
   // Initialize Lenis smooth scroll
   useLenis();
 

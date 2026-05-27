@@ -19,6 +19,7 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
   const [hovered, setHovered] = useState(false);
   const meshRef = useRef<THREE.Mesh>(null);
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
+  const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
   const { camera } = useThree();
 
   const active = hovered || isFocused;
@@ -36,8 +37,18 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
   const handleClick = (e: any) => {
     e.stopPropagation();
 
-    // Trigger transformation audio effect
+    // Trigger transformation audio/visual effects
     synth.playTransform();
+    setIsTransforming(true);
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      // Skip camera zoom for reduced motion
+      setActiveAlien(formattedId);
+      setIsTransforming(false);
+      return;
+    }
 
     // Dolly camera forward into card face
     gsap.to(camera.position, {

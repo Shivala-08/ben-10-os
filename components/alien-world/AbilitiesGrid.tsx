@@ -45,7 +45,7 @@ export function AbilitiesGrid({ alienId }: { alienId: string }) {
               textShadow: '0 0 5px var(--color-glow)',
               boxShadow: '0 0 12px var(--color-glow) inset'
             }}
-            className="px-6 py-3 rounded-full font-mono text-sm tracking-wider uppercase hover:text-black transition-all duration-300 cursor-default"
+            className="ability-chip px-6 py-3 rounded-full font-mono text-sm tracking-wider uppercase hover:text-black transition-all duration-300 cursor-default"
           >
             {ability}
           </motion.div>
