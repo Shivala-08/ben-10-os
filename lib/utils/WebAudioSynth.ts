@@ -278,6 +278,91 @@ class WebAudioSynth {
       }, 350);
     }
   }
+
+  // Play a low mechanical buzz error sound
+  public playAccessDenied() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(100, this.ctx.currentTime);
+    osc1.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.2);
+
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(102, this.ctx.currentTime);
+    osc2.frequency.linearRampToValueAtTime(82, this.ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.masterGain || this.ctx.destination);
+
+    osc1.start();
+    osc2.start();
+    osc1.stop(this.ctx.currentTime + 0.21);
+    osc2.stop(this.ctx.currentTime + 0.21);
+  }
+
+  // Play a crackling high-tension glitch sweep
+  public playMalfunction() {
+    this.initCtx();
+    if (!this.ctx || this.isMuted) return;
+
+    const time = this.ctx.currentTime;
+    
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, time);
+    osc.frequency.setValueAtTime(300, time + 0.1);
+    osc.frequency.setValueAtTime(50, time + 0.2);
+    osc.frequency.setValueAtTime(800, time + 0.3);
+    osc.frequency.setValueAtTime(150, time + 0.4);
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(500, time);
+    filter.frequency.exponentialRampToValueAtTime(2000, time + 0.5);
+
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain || this.ctx.destination);
+
+    osc.start(time);
+    osc.stop(time + 0.52);
+
+    try {
+      const bufferSize = this.ctx.sampleRate * 0.5;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.25, time);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.45);
+
+      noise.connect(noiseGain);
+      noiseGain.connect(this.masterGain || this.ctx.destination);
+
+      noise.start(time);
+      noise.stop(time + 0.5);
+    } catch (e) {}
+  }
 }
 
 // Export singleton instance

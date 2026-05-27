@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   description: 'The Ultimate Ben 10 Interactive Portfolio / Fan Experience',
 };
 
+import { GlobalTrigger } from '@/components/terminal/GlobalTrigger';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -36,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col bg-black overflow-x-hidden hologram-overlay">
         <Providers>
           {children}
+          <GlobalTrigger />
           <Analytics />
           <SpeedInsights />
         </Providers>

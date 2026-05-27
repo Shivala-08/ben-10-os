@@ -10,8 +10,50 @@ import { synth } from '@/lib/utils/WebAudioSynth';
 import gsap from 'gsap';
 import { PostProcessing } from '@/components/three/PostProcessing';
 import * as THREE from 'three';
+import { AnimatePresence } from 'framer-motion';
+import { AccessDenied } from '@/components/ui/AccessDenied';
 
-function CenterButton({ activeIndex, formattedId }: { activeIndex: number, formattedId: string }) {
+function CameraShake() {
+  const { camera } = useThree();
+  const isMalfunctioning = useOmnitrixStore((state) => state.isMalfunctioning);
+
+  useEffect(() => {
+    if (isMalfunctioning) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      const initialX = camera.position.x;
+      const initialY = camera.position.y;
+      const initialZ = camera.position.z;
+
+      const shakeTween = gsap.to(camera.position, {
+        x: '+=0.15',
+        y: '+=0.15',
+        z: '+=0.05',
+        duration: 0.05,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power1.inOut'
+      });
+
+      return () => {
+        shakeTween.kill();
+        camera.position.set(initialX, initialY, initialZ);
+      };
+    }
+  }, [isMalfunctioning, camera]);
+
+  return null;
+}
+
+interface CenterButtonProps {
+  activeIndex: number;
+  formattedId: string;
+  isLocked: boolean;
+  onLockedClick: () => void;
+}
+
+function CenterButton({ activeIndex, formattedId, isLocked, onLockedClick }: CenterButtonProps) {
   const [hovered, setHovered] = useState(false);
   const buttonRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
@@ -33,6 +75,11 @@ function CenterButton({ activeIndex, formattedId }: { activeIndex: number, forma
 
   const handleClick = (e: any) => {
     e.stopPropagation();
+    
+    if (isLocked) {
+      onLockedClick();
+      return;
+    }
     
     // Trigger transformation audio/visual effects
     synth.playTransform();
@@ -144,6 +191,10 @@ export function AlienWheel() {
   const setWheelRotation = useOmnitrixStore((state) => state.setWheelRotation);
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
   const isTransforming = useOmnitrixStore((state) => state.isTransforming);
+  const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
+  const unlockedAliens = useOmnitrixStore((state) => state.unlockedAliens);
+  const unlockAlien = useOmnitrixStore((state) => state.unlockAlien);
+  const isMalfunctioning = useOmnitrixStore((state) => state.isMalfunctioning);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -153,6 +204,7 @@ export function AlienWheel() {
   const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
   const dragVelocity = useRef(0);
   const [canvasReady, setCanvasReady] = useState(false);
+  const [lockedErrorAlien, setLockedErrorAlien] = useState<string | null>(null);
 
   useEffect(() => {
     if ('requestIdleCallback' in window) {
@@ -165,6 +217,9 @@ export function AlienWheel() {
 
   // Compute active focused alien index based on rotation angle
   const activeIndex = (Math.round((-wheelRotation) / ((2 * Math.PI) / 10)) % 10 + 10) % 10;
+  const activeAlienName = BIG_10_NAMES[activeIndex];
+  const activeFormattedId = activeAlienName.toLowerCase().replace(' ', '_');
+  const isActiveLocked = !unlockedAliens.includes(activeFormattedId);
 
   // Play click audio feedback when active index shifts
   useEffect(() => {
@@ -175,9 +230,45 @@ export function AlienWheel() {
     synth.playClick();
   }, [activeIndex]);
 
+  const handleLockedClick = (formattedId: string, name: string) => {
+    if (lockedErrorAlien === name) {
+      // Second click! Bypass and unlock DNA profile!
+      setLockedErrorAlien(null);
+      synth.playTransform();
+      setIsTransforming(true);
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) {
+        unlockAlien(formattedId);
+        setActiveAlien(formattedId);
+        setIsTransforming(false);
+        return;
+      }
+
+      unlockAlien(formattedId);
+      // Wait a tiny bit for the state to register and trigger full camera dolly transition
+      setTimeout(() => {
+        setActiveAlien(formattedId);
+      }, 50);
+    } else {
+      // First click! Trigger error buzzer feedback and show access denied modal
+      setLockedErrorAlien(name);
+      synth.playAccessDenied();
+    }
+  };
+
   // Key handlers for keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when typing or malfunctioning
+      if (
+        document.activeElement?.tagName === 'INPUT' || 
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        isMalfunctioning
+      ) {
+        return;
+      }
+
       const slotAngle = (2 * Math.PI) / 10;
       const latestRotation = useOmnitrixStore.getState().wheelRotation;
       let targetRotation = latestRotation;
@@ -189,8 +280,15 @@ export function AlienWheel() {
       } else if (e.key === 'Enter') {
         const currentRot = useOmnitrixStore.getState().wheelRotation;
         const currentActiveIndex = (Math.round((-currentRot) / ((2 * Math.PI) / 10)) % 10 + 10) % 10;
-        const formattedId = BIG_10_NAMES[currentActiveIndex].toLowerCase().replace(' ', '_');
-        setActiveAlien(formattedId);
+        const currentAlienName = BIG_10_NAMES[currentActiveIndex];
+        const formattedId = currentAlienName.toLowerCase().replace(' ', '_');
+        const isLocked = !useOmnitrixStore.getState().unlockedAliens.includes(formattedId);
+
+        if (isLocked) {
+          handleLockedClick(formattedId, currentAlienName);
+        } else {
+          setActiveAlien(formattedId);
+        }
         return;
       } else {
         return;
@@ -215,10 +313,11 @@ export function AlienWheel() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setWheelRotation, setActiveAlien]);
+  }, [setWheelRotation, setActiveAlien, isMalfunctioning, lockedErrorAlien]);
 
   // Pointer drag event handlers
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (isMalfunctioning) return;
     isDragging.current = true;
     startX.current = e.clientX;
     dragVelocity.current = 0;
@@ -232,7 +331,7 @@ export function AlienWheel() {
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging.current) return;
+    if (!isDragging.current || isMalfunctioning) return;
     if (snapTween.current) {
       snapTween.current.kill();
       snapTween.current = null;
@@ -252,7 +351,7 @@ export function AlienWheel() {
   };
 
   const handlePointerUp = () => {
-    if (!isDragging.current) return;
+    if (!isDragging.current || isMalfunctioning) return;
     isDragging.current = false;
     if (containerRef.current) {
       containerRef.current.style.cursor = 'grab';
@@ -314,7 +413,7 @@ export function AlienWheel() {
     const handleWheelEvent = (e: WheelEvent) => {
       e.preventDefault();
       
-      if (isDragging.current) return;
+      if (isDragging.current || isMalfunctioning) return;
 
       if (snapTween.current) {
         snapTween.current.kill();
@@ -354,7 +453,7 @@ export function AlienWheel() {
       container.removeEventListener('wheel', handleWheelEvent);
       if (wheelTimeout.current) clearTimeout(wheelTimeout.current);
     };
-  }, [setWheelRotation]);
+  }, [setWheelRotation, isMalfunctioning]);
 
   return (
     <div 
@@ -373,12 +472,16 @@ export function AlienWheel() {
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={1} color="#00FF41" />
           
+          <CameraShake />
+
           <DriftingWheel rotation={wheelRotation} isDragging={isDragging}>
             {BIG_10_NAMES.map((name, index) => {
               const angle = (index / BIG_10_NAMES.length) * Math.PI * 2;
               const radius = 5;
               const x = Math.sin(angle) * radius;
               const z = Math.cos(angle) * radius;
+              const slotFormattedId = name.toLowerCase().replace(' ', '_');
+              const isSlotLocked = !unlockedAliens.includes(slotFormattedId);
 
               return (
                 <WheelSlot 
@@ -387,6 +490,8 @@ export function AlienWheel() {
                   position={[x, 0, z]}
                   rotation={[0, angle, 0]} // rotate to face outward
                   isFocused={index === activeIndex}
+                  isLocked={isSlotLocked}
+                  onLockedClick={() => handleLockedClick(slotFormattedId, name)}
                 />
               );
             })}
@@ -401,7 +506,9 @@ export function AlienWheel() {
           {/* Dynamic Glowing Center Press Button */}
           <CenterButton 
             activeIndex={activeIndex} 
-            formattedId={BIG_10_NAMES[activeIndex].toLowerCase().replace(' ', '_')} 
+            formattedId={activeFormattedId}
+            isLocked={isActiveLocked}
+            onLockedClick={() => handleLockedClick(activeFormattedId, activeAlienName)}
           />
 
           <Environment preset="city" />
@@ -414,6 +521,16 @@ export function AlienWheel() {
           <span>⬡ INITIALIZING 3D DNA DECK...</span>
         </div>
       )}
+
+      {/* Access Denied Glitch Overlay */}
+      <AnimatePresence>
+        {lockedErrorAlien && (
+          <AccessDenied 
+            alienName={lockedErrorAlien} 
+            onClose={() => setLockedErrorAlien(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

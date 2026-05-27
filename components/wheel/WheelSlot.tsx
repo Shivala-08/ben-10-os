@@ -13,16 +13,18 @@ interface WheelSlotProps {
   position: [number, number, number];
   rotation: [number, number, number];
   isFocused: boolean;
+  isLocked: boolean;
+  onLockedClick: () => void;
 }
 
-export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProps) {
+export function WheelSlot({ name, position, rotation, isFocused, isLocked, onLockedClick }: WheelSlotProps) {
   const [hovered, setHovered] = useState(false);
   const meshRef = useRef<THREE.Mesh>(null);
   const setActiveAlien = useOmnitrixStore((state) => state.setActiveAlien);
   const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
   const { camera } = useThree();
 
-  const active = hovered || isFocused;
+  const active = (hovered || isFocused) && !isLocked;
   
   // Format alien ID to match the image name (e.g., 'heatblast.png', 'four_arms.png')
   const formattedId = name.toLowerCase().replace(' ', '_');
@@ -30,12 +32,17 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
-    const targetScale = active ? 1.3 : 0.95;
+    const targetScale = (hovered || isFocused) ? (isLocked ? 1.05 : 1.3) : 0.95;
     meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
   });
 
   const handleClick = (e: any) => {
     e.stopPropagation();
+
+    if (isLocked) {
+      onLockedClick();
+      return;
+    }
 
     // Trigger transformation audio/visual effects
     synth.playTransform();
@@ -44,7 +51,8 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
-      // Skip camera zoom for reduced motion
+      // Force unlock the DNA profile on success
+      useOmnitrixStore.getState().unlockAlien(formattedId);
       setActiveAlien(formattedId);
       setIsTransforming(false);
       return;
@@ -56,6 +64,8 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
       duration: 0.4,
       ease: 'power2.in',
       onComplete: () => {
+        // Force unlock the DNA profile on success
+        useOmnitrixStore.getState().unlockAlien(formattedId);
         setActiveAlien(formattedId);
         // Reset camera positions for subsequent loads
         camera.position.set(0, 2, 8);
@@ -72,7 +82,9 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
             e.stopPropagation();
             setHovered(true);
             document.body.style.cursor = 'pointer';
-            synth.playClick();
+            if (!isLocked) {
+              synth.playClick();
+            }
           }}
           onPointerOut={(e) => {
             e.stopPropagation();
@@ -83,9 +95,9 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
         >
           <boxGeometry args={[1, 1.5, 0.2]} />
           <meshStandardMaterial 
-            color={active ? "#00FF41" : "#114411"} 
-            emissive={active ? "#00FF41" : "#000000"}
-            emissiveIntensity={active ? 0.9 : 0}
+            color={isLocked ? "#222222" : (active ? "#00FF41" : "#114411")} 
+            emissive={isLocked ? "#000000" : (active ? "#00FF41" : "#000000")}
+            emissiveIntensity={isLocked ? 0 : (active ? 0.9 : 0)}
             wireframe
           />
 
@@ -95,25 +107,47 @@ export function WheelSlot({ name, position, rotation, isFocused }: WheelSlotProp
             <meshBasicMaterial 
               map={texture} 
               transparent 
-              opacity={active ? 0.95 : 0.5} 
+              opacity={isLocked ? 0.04 : (active ? 0.95 : 0.5)} 
               toneMapped={false}
               side={THREE.DoubleSide}
+              color={isLocked ? "#151515" : "#ffffff"}
             />
           </mesh>
 
-          {active && (
+          {/* 3D High-Fidelity Procedural Padlock Overlay */}
+          {isLocked && (
+            <group position={[0, 0, 0.18]}>
+              {/* Padlock loop shackle */}
+              <mesh position={[0, 0.16, 0]}>
+                <torusGeometry args={[0.16, 0.035, 8, 24, Math.PI]} />
+                <meshStandardMaterial color="#888888" metalness={0.9} roughness={0.15} />
+              </mesh>
+              {/* Padlock body */}
+              <mesh position={[0, -0.04, 0]}>
+                <boxGeometry args={[0.38, 0.32, 0.11]} />
+                <meshStandardMaterial color="#E63946" emissive="#550000" emissiveIntensity={0.6} roughness={0.3} metalness={0.7} />
+              </mesh>
+              {/* Keyhole slot */}
+              <mesh position={[0, -0.04, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.025, 0.025, 0.01, 16]} />
+                <meshBasicMaterial color="#000000" />
+              </mesh>
+            </group>
+          )}
+
+          {active && !isLocked && (
             <Sparkles count={25} scale={2} size={3} speed={0.6} opacity={1} color="#00FF41" />
           )}
 
           <Text
             position={[0, -1.2, 0]}
             rotation={[0, Math.PI, 0]}
-            fontSize={0.3}
-            color={active ? "#FFFFFF" : "#00FF41"}
+            fontSize={isLocked ? 0.22 : 0.3}
+            color={isLocked ? "#444444" : (active ? "#FFFFFF" : "#00FF41")}
             anchorX="center"
             anchorY="middle"
           >
-            {name}
+            {isLocked ? "DNA LOCKED" : name}
           </Text>
         </mesh>
       </Float>

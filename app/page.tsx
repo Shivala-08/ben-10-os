@@ -26,6 +26,13 @@ import { TransformSequence } from '@/components/transformation/TransformSequence
 import { CursorTrail } from '@/components/cursor/CursorTrail';
 import gsap from 'gsap';
 
+// Phase C imports
+import { TransformHistory } from '@/components/ui/TransformHistory';
+import { SessionStats } from '@/components/ui/SessionStats';
+import { MalfunctionFX } from '@/components/ui/MalfunctionFX';
+import { useKonamiCode } from '@/hooks/useKonamiCode';
+import { addHistoryLog } from '@/lib/utils/history';
+
 function CameraPullback() {
   const { camera } = useThree();
   const setIsTransforming = useOmnitrixStore((state) => state.setIsTransforming);
@@ -67,8 +74,20 @@ function TransformAberration() {
 export default function Home() {
   const bootComplete = useOmnitrixStore((state) => state.bootComplete);
   const activeAlien = useOmnitrixStore((state) => state.activeAlien);
+  const initUnlockedAliens = useOmnitrixStore((state) => state.initUnlockedAliens);
+  const setIsMalfunctioning = useOmnitrixStore((state) => state.setIsMalfunctioning);
+  const isMalfunctioning = useOmnitrixStore((state) => state.isMalfunctioning);
   const tiltRef = useMouseParallax(5); // Smooth sci-fi tilt effect
   const router = useRouter();
+
+  // Reference trackers for transformation duration history logging (C2)
+  const prevAlien = useRef<string | null>(null);
+  const transformStartTime = useRef<number>(0);
+
+  // Initialize browser localStorage unlocked state profile
+  useEffect(() => {
+    initUnlockedAliens();
+  }, [initUnlockedAliens]);
 
   // Dynamically synchronize store state to /alien/[slug] shareable deep links
   useEffect(() => {
@@ -80,6 +99,33 @@ export default function Home() {
       }
     }
   }, [activeAlien, bootComplete, router]);
+
+  // Track and log chronological session stats and history (C2/C3)
+  useEffect(() => {
+    if (activeAlien !== prevAlien.current) {
+      const now = Date.now();
+      if (prevAlien.current && transformStartTime.current > 0) {
+        const duration = Math.round((now - transformStartTime.current) / 1000);
+        if (duration > 0) {
+          addHistoryLog(prevAlien.current, duration);
+        }
+      }
+      if (activeAlien) {
+        transformStartTime.current = now;
+      } else {
+        transformStartTime.current = 0;
+      }
+      prevAlien.current = activeAlien;
+    }
+  }, [activeAlien]);
+
+  // Global keyboard sequence listener tracking the Konami Code (C4)
+  useKonamiCode(() => {
+    // Only trigger malfunction on select screen while not already in progress
+    if (bootComplete && !activeAlien && !isMalfunctioning) {
+      setIsMalfunctioning(true);
+    }
+  });
   
   // Register GSAP continuous UI breathing loops
   useIdleAnimations(bootComplete);
@@ -90,7 +136,7 @@ export default function Home() {
   // Global Keyboard Shortcuts (Escape to exit alien view, M to toggle mute)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA' || isMalfunctioning) {
         return;
       }
 
@@ -107,7 +153,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isMalfunctioning]);
 
   return (
     <main className="min-h-screen bg-black text-white overflow-x-hidden transition-colors duration-500 relative selection:bg-[var(--color-primary)] selection:text-black">
@@ -118,6 +164,14 @@ export default function Home() {
       <CursorTrail />
       <NavBar />
       <HUDFrame />
+
+      {bootComplete && (
+        <>
+          <TransformHistory />
+          <SessionStats />
+          <MalfunctionFX />
+        </>
+      )}
 
       {!bootComplete && <BootSequence />}
 

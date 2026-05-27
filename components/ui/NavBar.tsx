@@ -1,8 +1,12 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
 import { themes } from '@/lib/themes';
+import { synth } from '@/lib/utils/WebAudioSynth';
+
+import { VoiceControl } from '@/components/ui/VoiceControl';
 
 export function NavBar() {
   const activeAlien = useOmnitrixStore((state) => state.activeAlien);
@@ -15,6 +19,10 @@ export function NavBar() {
 
   const currentTheme = activeAlien ? themes[activeAlien] : null;
   const alienName = currentTheme ? currentTheme.name : '';
+
+  const handleNavClick = () => {
+    synth.playClick();
+  };
 
   return (
     <header className="fixed top-0 inset-x-0 h-16 bg-black/60 backdrop-blur-md border-b border-[var(--color-primary)]/20 z-40 transition-colors duration-500 px-6 md:px-12 flex items-center justify-between select-none">
@@ -33,8 +41,58 @@ export function NavBar() {
         </div>
       </div>
 
+      {/* Center Navigation Links (Visible on Home Dial) */}
+      {!activeAlien && (
+        <div className="hidden md:flex items-center gap-3.5 relative z-50">
+          <Link
+            href="/codex"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            DNA_CODEX
+          </Link>
+          <Link
+            href="/battle"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            BATTLE_ARENA
+          </Link>
+          <Link
+            href="/radar"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            SIGNAL_RADAR
+          </Link>
+          <Link
+            href="/clock"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            CHRONO_CLOCK
+          </Link>
+          <Link
+            href="/lab"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            DNA_LAB
+          </Link>
+          <Link
+            href="/terminal"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            SYS_CONSOLE
+          </Link>
+        </div>
+      )}
+
       {/* Control Buttons */}
       <div className="flex items-center gap-4 md:gap-6">
+        <VoiceControl />
+
         {activeAlien && (
           <button
             onClick={() => setActiveAlien(null)}
