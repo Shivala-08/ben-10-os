@@ -1,6 +1,7 @@
 'use client';
 
 import { useOmnitrixStore } from '@/lib/store/useOmnitrixStore';
+import { useRouter } from 'next/navigation';
 import { BootSequence } from '@/components/boot/BootSequence';
 import { AlienWheel } from '@/components/wheel/AlienWheel';
 import { ThemeSwapper } from '@/components/transformation/ThemeSwapper';
@@ -18,6 +19,7 @@ import { NavBar } from '@/components/ui/NavBar';
 import { HUDFrame } from '@/components/ui/HUDFrame';
 import { useMouseParallax } from '@/hooks/useMouseParallax';
 import { useIdleAnimations } from '@/hooks/useIdleAnimations';
+import { KeyboardTooltip } from '@/components/ui/KeyboardTooltip';
 
 import { useEffect, useRef, useState } from 'react';
 import { TransformSequence } from '@/components/transformation/TransformSequence';
@@ -66,6 +68,18 @@ export default function Home() {
   const bootComplete = useOmnitrixStore((state) => state.bootComplete);
   const activeAlien = useOmnitrixStore((state) => state.activeAlien);
   const tiltRef = useMouseParallax(5); // Smooth sci-fi tilt effect
+  const router = useRouter();
+
+  // Dynamically synchronize store state to /alien/[slug] shareable deep links
+  useEffect(() => {
+    if (bootComplete) {
+      if (activeAlien) {
+        router.push(`/alien/${activeAlien}`, { scroll: false });
+      } else {
+        router.push('/', { scroll: false });
+      }
+    }
+  }, [activeAlien, bootComplete, router]);
   
   // Register GSAP continuous UI breathing loops
   useIdleAnimations(bootComplete);
@@ -121,6 +135,7 @@ export default function Home() {
                 </p>
               </div>
               <SurpriseButton />
+              <KeyboardTooltip />
             </div>
           </div>
         </>

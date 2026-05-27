@@ -152,6 +152,16 @@ export function AlienWheel() {
   const snapTween = useRef<gsap.core.Tween | null>(null);
   const wheelTimeout = useRef<NodeJS.Timeout | null>(null);
   const dragVelocity = useRef(0);
+  const [canvasReady, setCanvasReady] = useState(false);
+
+  useEffect(() => {
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => setCanvasReady(true));
+    } else {
+      const timer = setTimeout(() => setCanvasReady(true), 150);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Compute active focused alien index based on rotation angle
   const activeIndex = (Math.round((-wheelRotation) / ((2 * Math.PI) / 10)) % 10 + 10) % 10;
@@ -355,49 +365,55 @@ export function AlienWheel() {
       onPointerLeave={handlePointerUp}
       className="w-full h-screen absolute inset-0 z-10 select-none cursor-grab"
     >
-      <Canvas 
-        camera={{ position: [0, 2, 8], fov: 45 }}
-        className="pointer-events-none"
-      >
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#00FF41" />
-        
-        <DriftingWheel rotation={wheelRotation} isDragging={isDragging}>
-          {BIG_10_NAMES.map((name, index) => {
-            const angle = (index / BIG_10_NAMES.length) * Math.PI * 2;
-            const radius = 5;
-            const x = Math.sin(angle) * radius;
-            const z = Math.cos(angle) * radius;
+      {canvasReady ? (
+        <Canvas 
+          camera={{ position: [0, 2, 8], fov: 45 }}
+          className="pointer-events-none"
+        >
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} intensity={1} color="#00FF41" />
+          
+          <DriftingWheel rotation={wheelRotation} isDragging={isDragging}>
+            {BIG_10_NAMES.map((name, index) => {
+              const angle = (index / BIG_10_NAMES.length) * Math.PI * 2;
+              const radius = 5;
+              const x = Math.sin(angle) * radius;
+              const z = Math.cos(angle) * radius;
 
-            return (
-              <WheelSlot 
-                key={name}
-                name={name}
-                position={[x, 0, z]}
-                rotation={[0, angle, 0]} // rotate to face outward
-                isFocused={index === activeIndex}
-              />
-            );
-          })}
-        </DriftingWheel>
+              return (
+                <WheelSlot 
+                  key={name}
+                  name={name}
+                  position={[x, 0, z]}
+                  rotation={[0, angle, 0]} // rotate to face outward
+                  isFocused={index === activeIndex}
+                />
+              );
+            })}
+          </DriftingWheel>
 
-        {/* Hologram Ring effect */}
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[4.8, 5.2, 64]} />
-          <meshBasicMaterial color="#00FF41" transparent opacity={0.2} side={2} />
-        </mesh>
+          {/* Hologram Ring effect */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[4.8, 5.2, 64]} />
+            <meshBasicMaterial color="#00FF41" transparent opacity={0.2} side={2} />
+          </mesh>
 
-        {/* Dynamic Glowing Center Press Button */}
-        <CenterButton 
-          activeIndex={activeIndex} 
-          formattedId={BIG_10_NAMES[activeIndex].toLowerCase().replace(' ', '_')} 
-        />
+          {/* Dynamic Glowing Center Press Button */}
+          <CenterButton 
+            activeIndex={activeIndex} 
+            formattedId={BIG_10_NAMES[activeIndex].toLowerCase().replace(' ', '_')} 
+          />
 
-        <Environment preset="city" />
+          <Environment preset="city" />
 
-        {/* High-Fidelity Cinematic Post-Processing */}
-        <PostProcessing isTransforming={isTransforming} />
-      </Canvas>
+          {/* High-Fidelity Cinematic Post-Processing */}
+          <PostProcessing isTransforming={isTransforming} />
+        </Canvas>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center font-mono text-[11px] text-[#00FF41]/40 uppercase tracking-[0.25em] animate-pulse pointer-events-none gap-2 select-none">
+          <span>⬡ INITIALIZING 3D DNA DECK...</span>
+        </div>
+      )}
     </div>
   );
 }

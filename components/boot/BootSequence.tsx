@@ -34,7 +34,10 @@ export function BootSequence() {
               opacity: 0,
               duration: 0.5,
               delay: 0.5,
-              onComplete: () => setBootComplete(true),
+              onComplete: () => {
+                sessionStorage.setItem('omnitrix_boot_done', 'true');
+                setBootComplete(true);
+              },
             });
           }
         });
