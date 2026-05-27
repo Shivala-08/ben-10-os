@@ -62,6 +62,28 @@ export default function Home() {
   // Initialize Lenis smooth scroll
   useLenis();
 
+  // Global Keyboard Shortcuts (Escape to exit alien view, M to toggle mute)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        const active = useOmnitrixStore.getState().activeAlien;
+        if (active) {
+          useOmnitrixStore.getState().setActiveAlien(null);
+        }
+      } else if (e.key.toLowerCase() === 'm') {
+        const muted = useOmnitrixStore.getState().isMuted;
+        useOmnitrixStore.getState().setIsMuted(!muted);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <main className="min-h-screen bg-black text-white overflow-x-hidden transition-colors duration-500 relative selection:bg-[var(--color-primary)] selection:text-black">
       <ThemeSwapper />
