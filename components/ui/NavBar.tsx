@@ -86,6 +86,13 @@ export function NavBar() {
           >
             SYS_CONSOLE
           </Link>
+          <Link
+            href="/about"
+            onClick={handleNavClick}
+            className="font-mono px-3.5 py-1 border border-[#00FF41]/20 hover:border-[#00FF41] rounded text-[10px] uppercase font-bold tracking-widest text-[#00FF41]/75 hover:text-[#00FF41] hover:bg-[#00FF41]/10 transition-all shadow-[0_0_5px_rgba(0,255,65,0.05)] hover:shadow-[0_0_10px_rgba(0,255,65,0.2)]"
+          >
+            SYS_REPORT
+          </Link>
         </div>
       )}
 

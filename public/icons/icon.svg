@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background Casing -->
+  <rect width="512" height="512" rx="100" fill="#000000"/>
+  <!-- Outer Bezel -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#00FF41" stroke-width="12" stroke-dasharray="16 10"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#113311" stroke-width="8"/>
+  <circle cx="256" cy="256" r="160" fill="#0c0c0c" stroke="#00FF41" stroke-width="4"/>
+  <!-- Central Green Core -->
+  <circle cx="256" cy="256" r="120" fill="#00661b"/>
+  <!-- Bezel Markings (Hourglass wedges) -->
+  <path d="M166 166 L346 346 A120 120 0 0 1 166 346 Z" fill="#000000" stroke="#00FF41" stroke-width="3"/>
+  <path d="M346 166 L166 346 A120 120 0 0 1 346 346 Z" fill="#000000" stroke="#00FF41" stroke-width="3"/>
+  <!-- Inner core wedges -->
+  <path d="M256 256 L171 171 A120 120 0 0 1 341 171 Z" fill="#00FF41"/>
+  <path d="M256 256 L171 341 A120 120 0 0 0 341 341 Z" fill="#00FF41"/>
+  <!-- Bezel Rivets -->
+  <circle cx="256" cy="80" r="10" fill="#00FF41" />
+  <circle cx="256" cy="432" r="10" fill="#00FF41" />
+  <circle cx="80" cy="256" r="10" fill="#00FF41" />
+  <circle cx="432" cy="256" r="10" fill="#00FF41" />
+</svg>

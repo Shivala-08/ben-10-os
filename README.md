@@ -1,55 +1,73 @@
-# OmnitrixOS
+# ⬡ Omnitrix OS — Version 2.0
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-- [Next.js Documentation](https://nextjs.org/docs) – learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) – an interactive Next.js tutorial.
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
+An immersive, high-fidelity interactive digital replication of the classic Ben 10 watch interface. Deployed live as a premium Next.js 16 WebGL experience.
 
 ---
 
-## Project Tasks
+## 🚀 Key Features
 
-A checklist of the incremental tasks required to build the OmnitrixOS experience. As each task is completed, remove it from the list.
+### 1. Cinematic Visual Polish (WebGL & Three.js)
+- **Cinematic Bloom Filter**: Postprocessing pipeline using `@react-three/postprocessing` that drives emissive light glows.
+- **Chromatic Aberration**: Visual screen distortion spikes triggered automatically during dynamic mutations.
+- **Micro-Breathing Animations**: Continuous organic wobbles and GSAP-staggered UI shimmers keep interface elements alive.
+- **Tactile Drag Dial**: Fully interactive 3D dial with rotational velocity decay and spring snapping alignment.
 
+### 2. Audio & Aural Feedback
+- **Aural Oscillation Synth**: Sound effects manager built with `Howler.js` to play mechanical clicks, transformation hums, error buzzes, and diagnostic ambient noise.
 
+### 3. Voice Control Matrix
+- **Speech Command Shell**: Native **Web Speech API** integration enabling hands-free system commands (e.g. `activate heatblast`, `random alien`, `mute matrix`).
+- **Dynamic Waveform**: Rendered using HTML5 canvas connecting directly to browser microphone analyser frequencies.
 
+### 4. Interactive Consoles & HUD Panels
+- **DNA Codex**: Real-time holographic filter grid displaying 62 species with detail sliders and search metrics.
+- **Signal Radar**: Canvas-rendered radial grid scanner that periodically spots atmospheric bio-strands.
+- **DNA Fusion Lab**: An interactive mixing grid to drag two cards and fuse species names, abilities, and palette gradients.
+- **Chrono Clock**: Working analog clock mapped onto 12-hour slots with full mechanical spinning overlays on the hour.
+- **Metamorphic Logs & Stats**: Session stats tracking total mutations, favorites, and time-lapse history stored in localStorage.
+- **Konami Code Exploits**: Typing standard sequence triggers absolute system malfunctions with visual screen shakes.
 
+### 5. Offline Installable PWA Support
+- **Standalone Mode**: Configured high-fidelity vector manifest properties for standalone mobile launch.
+- **Dynamic Caching**: Service worker managing aggressive cache-first policies for audio feeds and fonts to enable complete offline access.
 
+---
 
+## 🛠️ Technical Stack Specs
 
+| Component | Technology |
+| :--- | :--- |
+| **Framework Engine** | Next.js 16 (App Router) & React 19 |
+| **3D Rendering** | Three.js & React Three Fiber (R3F) |
+| **Motion Physics** | GSAP & Framer Motion |
+| **State Deck** | Zustand |
+| **Network Query** | TanStack Query v5 |
+| **Sound System** | Howler.js |
 
+---
 
+## 🛠️ Getting Started
 
+### 1. Installation
+Install project dependencies:
+```bash
+npm install
+```
 
+### 2. Run the Development Server
+Run the Turbopack hot-reload compiler locally:
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the digital database.
 
+### 3. Compile Production Bundle
+Verify TypeScript validation and export static assets:
+```bash
+npm run build
+```
 
-- [ ] **Accessibility** – Ensure ARIA live regions, keyboard navigation, reduced‑motion support, and fallback for non‑WebGL devices.
-- [ ] **Performance Optimizations** – Code‑splitting, dynamic imports, lazy loading of shaders, and asset preloading to meet Lighthouse targets.
-- [ ] **Vercel Deployment** – Configure `vercel.json` (if needed), set environment variables, and test production build.
-Feel free to update this list as the project evolves.
+---
+
+## 🧬 Diagnostic Documentation
+To review deep architectural blueprints, trigonometric layout specifications, and lazy-loading optimizations, navigate to the `/about` route (accessible via the navbar **SYS_REPORT** button).
